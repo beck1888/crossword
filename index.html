@@ -33,22 +33,7 @@
                 <button id="loadPresetBtn">Load Preset</button>
             </div>
 
-            <div class="generation-options">
-                <h3>Generation Options</h3>
-                <div class="option-group">
-                    <label for="generationMode">Generation Mode:</label>
-                    <select id="generationMode">
-                        <option value="maxOverlap">Maximum Overlap</option>
-                        <option value="random">Random</option>
-                    </select>
-                </div>
-                <div class="option-group">
-                    <label for="enforceAllWords">
-                        <input type="checkbox" id="enforceAllWords" checked>
-                        Use all words (may require multiple attempts)
-                    </label>
-                </div>
-            </div>
+
 
             <div class="words-list">
                 <h3>Words Added (<span id="wordCount">0</span>)</h3>
@@ -106,9 +91,6 @@
             </div>
         </div>
     </div>
-
-    <!-- Toast Container -->
-    <div id="toastContainer" class="toast-container"></div>
 
     <script src="crossword.js"></script>
 </body>

@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crossword Generator</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🧩 Crossword Generator</h1>
+            <p>Create printable crossword puzzles with maximum word overlap</p>
+        </header>
+
+        <div class="input-section">
+            <h2>Add Words and Clues</h2>
+            <div class="word-input">
+                <input type="text" id="wordInput" placeholder="Enter word">
+                <input type="text" id="clueInput" placeholder="Enter clue">
+                <button id="addWordBtn">Add Word</button>
+            </div>
+            
+            <div class="preset-section">
+                <label for="presetSelect">Or choose a preset theme:</label>
+                <select id="presetSelect">
+                    <option value="">-- Select Theme --</option>
+                    <option value="animals">Animals</option>
+                    <option value="colors">Colors</option>
+                    <option value="countries">Countries</option>
+                    <option value="sports">Sports</option>
+                </select>
+                <button id="loadPresetBtn">Load Preset</button>
+            </div>
+
+            <div class="words-list">
+                <h3>Words Added (<span id="wordCount">0</span>)</h3>
+                <div id="wordsList"></div>
+            </div>
+
+            <div class="controls">
+                <button id="generateBtn" disabled>Generate Crossword</button>
+                <button id="clearBtn">Clear All</button>
+                <button id="printBtn" disabled>Print Crossword</button>
+            </div>
+        </div>
+
+        <div class="output-section">
+            <div class="crossword-container">
+                <h2>Generated Crossword</h2>
+                <div id="crosswordGrid"></div>
+            </div>
+
+            <div class="clues-container">
+                <div class="clues-section">
+                    <h3>Across</h3>
+                    <div id="acrossClues"></div>
+                </div>
+                <div class="clues-section">
+                    <h3>Down</h3>
+                    <div id="downClues"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Print Version -->
+    <div id="printVersion" class="print-only">
+        <div class="print-header">
+            <h1>Crossword Puzzle</h1>
+            <p>Fill in the grid using the clues below</p>
+        </div>
+        
+        <div class="print-content">
+            <div class="print-grid">
+                <div id="printGrid"></div>
+            </div>
+            
+            <div class="print-clues">
+                <div class="print-clues-section">
+                    <h3>Across</h3>
+                    <div id="printAcrossClues"></div>
+                </div>
+                <div class="print-clues-section">
+                    <h3>Down</h3>
+                    <div id="printDownClues"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="crossword.js"></script>
+</body>
+</html>

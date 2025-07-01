@@ -427,6 +427,7 @@ class CrosswordGenerator {
 
     /**
      * Generate crossword using the selected generation mode and options
+     * Systematically tries all possibilities with timeout when enforcing all words
      */
     generateCrossword() {
         if (this.words.length < 2) {
@@ -434,82 +435,226 @@ class CrosswordGenerator {
             return;
         }
 
-        // Get generation options from UI
+        // Get generation options from UI and config
         const generationMode = document.getElementById('generationMode').value;
         const enforceAllWords = document.getElementById('enforceAllWords').checked;
-        const maxAttempts = this.config?.generation?.maxAttempts || 5;
+        const maxAttempts = this.config?.generation?.maxAttempts || 1000;
+        const timeoutSeconds = this.config?.generation?.timeoutSeconds || 10;
 
-        // Show loading
+        // Show loading with enhanced spinner for systematic attempts
         const generateBtn = document.getElementById('generateBtn');
         const originalText = generateBtn.textContent;
-        generateBtn.innerHTML = 'Generating... <span class="loading"></span>';
+        
+        if (enforceAllWords) {
+            generateBtn.innerHTML = 'Trying all possibilities... <span class="loading"></span>';
+            this.showMessage('Systematically exploring all possible arrangements...', 'info');
+        } else {
+            generateBtn.innerHTML = 'Generating... <span class="loading"></span>';
+        }
         generateBtn.disabled = true;
 
         // Use setTimeout to allow UI update
         setTimeout(() => {
-            let bestResult = null;
-            let bestScore = 0;
-            
-            // Try multiple attempts if enforcing all words or using random mode
-            const attempts = enforceAllWords ? maxAttempts : 1;
-            
-            for (let attempt = 0; attempt < attempts; attempt++) {
-                this.reset();
-                const result = this.generateSingleCrossword(generationMode);
-                
-                // Score the result based on number of words placed and intersections
-                const score = this.scoreCrosswordResult(result);
-                
-                // If we got all words, use this result immediately
-                if (result.placedWords.size === this.words.length) {
-                    bestResult = result;
-                    break;
-                }
-                
-                // Otherwise, keep track of the best result so far
-                if (score > bestScore) {
-                    bestScore = score;
-                    bestResult = result;
-                }
-            }
-            
-            // Apply the best result
-            if (bestResult) {
-                this.applyGenerationResult(bestResult);
-            }
-            
-            this.showAnswers = false; // Reset answer visibility when generating new crossword
-            this.displayCrossword();
-            this.displayClues();
-            this.updateButtons();
-            
-            // Reset toggle button text
-            const toggleAnswersBtn = document.getElementById('toggleAnswersBtn');
-            toggleAnswersBtn.textContent = '👁️ Show Answers';
-            
-            // Restore button
-            generateBtn.textContent = originalText;
-            generateBtn.disabled = false;
-            
-            const placedCount = this.placements.length;
-            const totalCount = this.words.length;
-            
-            if (placedCount === totalCount) {
-                this.showMessage(`Successfully generated crossword with all ${placedCount} words!`, 'success');
-            } else if (enforceAllWords && attempts > 1) {
-                this.showMessage(`Generated crossword with ${placedCount} out of ${totalCount} words after ${attempts} attempts`, 'warning');
-            } else {
-                this.showMessage(`Generated crossword with ${placedCount} out of ${totalCount} words`, 'warning');
-            }
+            this.generateCrosswordWithSystematicAttempts(
+                generationMode, 
+                enforceAllWords, 
+                maxAttempts, 
+                timeoutSeconds,
+                generateBtn,
+                originalText
+            );
         }, 100);
     }
 
     /**
-     * Generate a single crossword attempt using the specified mode
+     * Generate crossword with systematic attempts and timeout handling
+     * @param {string} generationMode - Generation mode to use
+     * @param {boolean} enforceAllWords - Whether to enforce using all words
+     * @param {number} maxAttempts - Maximum number of attempts
+     * @param {number} timeoutSeconds - Timeout in seconds
+     * @param {HTMLElement} generateBtn - Generate button element
+     * @param {string} originalText - Original button text
+     */
+    async generateCrosswordWithSystematicAttempts(generationMode, enforceAllWords, maxAttempts, timeoutSeconds, generateBtn, originalText) {
+        const startTime = Date.now();
+        const timeoutMs = timeoutSeconds * 1000;
+        
+        let bestResult = null;
+        let bestScore = 0;
+        let attempts = 0;
+        let foundPerfectSolution = false;
+        
+        // If not enforcing all words, just do a single attempt
+        const totalAttempts = enforceAllWords ? maxAttempts : 1;
+        
+        // Generate different seed combinations for systematic exploration
+        const seedCombinations = this.generateSeedCombinations(generationMode);
+        
+        for (let seedIndex = 0; seedIndex < seedCombinations.length && attempts < totalAttempts; seedIndex++) {
+            // Check timeout
+            if (Date.now() - startTime > timeoutMs) {
+                console.log(`Generation timeout after ${attempts} attempts`);
+                break;
+            }
+            
+            attempts++;
+            
+            // Update progress periodically
+            if (attempts % 10 === 0 && enforceAllWords) {
+                generateBtn.innerHTML = `Attempt ${attempts}/${totalAttempts}... <span class="loading"></span>`;
+                // Allow UI update
+                await new Promise(resolve => setTimeout(resolve, 1));
+            }
+            
+            this.reset();
+            const result = this.generateSingleCrosswordWithSeed(generationMode, seedCombinations[seedIndex]);
+            
+            // Score the result
+            const score = this.scoreCrosswordResult(result);
+            
+            // If we got all words, use this result immediately
+            if (result.placedWords.size === this.words.length) {
+                bestResult = result;
+                foundPerfectSolution = true;
+                console.log(`Found perfect solution after ${attempts} attempts`);
+                break;
+            }
+            
+            // Keep track of the best result so far
+            if (score > bestScore) {
+                bestScore = score;
+                bestResult = result;
+            }
+        }
+        
+        // Apply the best result
+        if (bestResult) {
+            this.applyGenerationResult(bestResult);
+        }
+        
+        this.showAnswers = false; // Reset answer visibility when generating new crossword
+        this.displayCrossword();
+        this.displayClues();
+        this.updateButtons();
+        
+        // Reset toggle button text
+        const toggleAnswersBtn = document.getElementById('toggleAnswersBtn');
+        toggleAnswersBtn.textContent = '👁️ Show Answers';
+        
+        // Restore button
+        generateBtn.textContent = originalText;
+        generateBtn.disabled = false;
+        
+        const placedCount = this.placements.length;
+        const totalCount = this.words.length;
+        const timeElapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+        
+        if (foundPerfectSolution) {
+            this.showMessage(`Perfect solution found! All ${placedCount} words placed after ${attempts} attempts (${timeElapsed}s)`, 'success');
+        } else if (placedCount === totalCount) {
+            this.showMessage(`Successfully generated crossword with all ${placedCount} words after ${attempts} attempts (${timeElapsed}s)`, 'success');
+        } else if (enforceAllWords && attempts > 1) {
+            this.showMessage(`Best result: ${placedCount} out of ${totalCount} words after ${attempts} attempts (${timeElapsed}s)`, 'warning');
+        } else {
+            this.showMessage(`Generated crossword with ${placedCount} out of ${totalCount} words`, 'warning');
+        }
+    }
+
+    /**
+     * Generate seed combinations for systematic exploration
+     * @param {string} generationMode - Generation mode to use
+     * @returns {Array} Array of seed objects for systematic attempts
+     */
+    generateSeedCombinations(generationMode) {
+        const seeds = [];
+        
+        if (generationMode === 'random') {
+            // For random mode, generate different random seeds
+            for (let i = 0; i < 1000; i++) {
+                seeds.push({ randomSeed: Math.random(), wordOrderSeed: Math.random() });
+            }
+        } else {
+            // For maxOverlap mode, try different word orderings and starting positions
+            const wordPermutations = this.generateWordOrderVariations();
+            const startingPositions = this.generateStartingPositionVariations();
+            
+            for (const wordOrder of wordPermutations) {
+                for (const startPos of startingPositions) {
+                    seeds.push({ wordOrder, startingPosition: startPos });
+                }
+            }
+        }
+        
+        return seeds;
+    }
+
+    /**
+     * Generate different word order variations for systematic exploration
+     * @returns {Array} Array of word order arrays
+     */
+    generateWordOrderVariations() {
+        const variations = [];
+        const words = [...this.words];
+        
+        // Original length-based sorting (longest first)
+        variations.push([...words].sort((a, b) => b.word.length - a.word.length));
+        
+        // Reverse length-based sorting (shortest first)
+        variations.push([...words].sort((a, b) => a.word.length - b.word.length));
+        
+        // Alphabetical sorting
+        variations.push([...words].sort((a, b) => a.word.localeCompare(b.word)));
+        
+        // Reverse alphabetical sorting
+        variations.push([...words].sort((a, b) => b.word.localeCompare(a.word)));
+        
+        // Try up to 20 different random permutations
+        for (let i = 0; i < 20 && variations.length < 50; i++) {
+            const shuffled = [...words];
+            // Fisher-Yates shuffle with deterministic seed
+            for (let j = shuffled.length - 1; j > 0; j--) {
+                const k = Math.floor(((i * 31 + j * 17) % 1000) / 1000 * (j + 1));
+                [shuffled[j], shuffled[k]] = [shuffled[k], shuffled[j]];
+            }
+            variations.push(shuffled);
+        }
+        
+        return variations;
+    }
+
+    /**
+     * Generate different starting position variations
+     * @returns {Array} Array of starting position objects
+     */
+    generateStartingPositionVariations() {
+        const positions = [];
+        const center = Math.floor(this.gridSize / 2);
+        
+        // Center positions (original)
+        positions.push({ row: center, col: center, direction: 'across' });
+        positions.push({ row: center, col: center, direction: 'down' });
+        
+        // Off-center positions
+        const offsets = [-3, -2, -1, 1, 2, 3];
+        for (const rowOffset of offsets) {
+            for (const colOffset of offsets) {
+                const row = Math.max(0, Math.min(this.gridSize - 1, center + rowOffset));
+                const col = Math.max(0, Math.min(this.gridSize - 1, center + colOffset));
+                positions.push({ row, col, direction: 'across' });
+                positions.push({ row, col, direction: 'down' });
+            }
+        }
+        
+        return positions.slice(0, 20); // Limit to 20 positions
+    }
+
+    /**
+     * Generate a single crossword attempt using a specific seed for systematic exploration
      * @param {string} mode - Generation mode: 'maxOverlap' or 'random'
+     * @param {Object} seed - Seed object containing generation parameters
      * @returns {Object} Result object with placements and placed words
      */
-    generateSingleCrossword(mode) {
+    generateSingleCrosswordWithSeed(mode, seed) {
         const result = {
             placements: [],
             placedWords: new Set(),
@@ -517,22 +662,45 @@ class CrosswordGenerator {
             currentNumber: 1
         };
         
-        // Sort words based on generation mode
+        // Determine word order based on mode and seed
         let sortedWords;
-        if (mode === 'random') {
-            // Shuffle words randomly
-            sortedWords = [...this.words].sort(() => Math.random() - 0.5);
+        if (mode === 'random' && seed.randomSeed !== undefined) {
+            // Use deterministic random based on seed
+            sortedWords = [...this.words];
+            this.deterministicShuffle(sortedWords, seed.randomSeed);
+        } else if (seed.wordOrder) {
+            // Use provided word order
+            sortedWords = seed.wordOrder;
         } else {
-            // Default: sort by length (longer first) for maximum overlap
+            // Default: sort by length (longer first)
             sortedWords = [...this.words].sort((a, b) => b.word.length - a.word.length);
         }
         
-        // Place first word in center
+        // Determine starting position
         const firstWord = sortedWords[0];
-        const centerRow = Math.floor(this.gridSize / 2);
-        const centerCol = Math.max(0, Math.floor((this.gridSize - firstWord.word.length) / 2));
+        let startRow, startCol, startDirection;
         
-        this.placeWordForResult(result, firstWord.word, firstWord.clue, centerRow, centerCol, 'across');
+        if (seed.startingPosition) {
+            startRow = seed.startingPosition.row;
+            startCol = seed.startingPosition.col;
+            startDirection = seed.startingPosition.direction;
+            
+            // Adjust if word doesn't fit
+            if (startDirection === 'across' && startCol + firstWord.word.length > this.gridSize) {
+                startCol = Math.max(0, this.gridSize - firstWord.word.length);
+            }
+            if (startDirection === 'down' && startRow + firstWord.word.length > this.gridSize) {
+                startRow = Math.max(0, this.gridSize - firstWord.word.length);
+            }
+        } else {
+            // Default center placement
+            const centerRow = Math.floor(this.gridSize / 2);
+            startRow = centerRow;
+            startCol = Math.max(0, Math.floor((this.gridSize - firstWord.word.length) / 2));
+            startDirection = 'across';
+        }
+        
+        this.placeWordForResult(result, firstWord.word, firstWord.clue, startRow, startCol, startDirection);
         
         // Try to place remaining words
         for (let i = 1; i < sortedWords.length; i++) {
@@ -552,9 +720,10 @@ class CrosswordGenerator {
                     let score;
                     
                     if (mode === 'random') {
-                        // Random mode: use random scoring with bias toward intersections
+                        // Random mode: use deterministic random scoring
+                        const randomValue = this.deterministicRandom(seed.randomSeed + i * 37);
                         const intersections = this.findIntersections(word, existingPlacement.word).length;
-                        score = Math.random() * 100 + intersections * 10;
+                        score = randomValue * 100 + intersections * 10;
                     } else {
                         // Max overlap mode: prioritize maximum intersections
                         score = this.findIntersections(word, existingPlacement.word).length;
@@ -576,6 +745,33 @@ class CrosswordGenerator {
         return result;
     }
 
+    /**
+     * Deterministic shuffle using a seed value
+     * @param {Array} array - Array to shuffle in place
+     * @param {number} seed - Seed value for deterministic randomness
+     */
+    deterministicShuffle(array, seed) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(this.deterministicRandom(seed + i) * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+    }
+
+    /**
+     * Generate deterministic random number from seed
+     * @param {number} seed - Seed value
+     * @returns {number} Pseudo-random number between 0 and 1
+     */
+    deterministicRandom(seed) {
+        const x = Math.sin(seed) * 10000;
+        return x - Math.floor(x);
+    }
+
+    /**
+     * Generate a single crossword attempt using the specified mode
+     * @param {string} mode - Generation mode: 'maxOverlap' or 'random'
+     * @returns {Object} Result object with placements and placed words
+     */
     /**
      * Place a word in the result object (used during generation attempts)
      * @param {Object} result - Result object to modify

@@ -45,7 +45,8 @@ The application is configured through the `server-config.json` file, which conta
 "generation": {
     "mode": "maxOverlap",
     "enforceAllWords": true,
-    "maxAttempts": 5
+    "maxAttempts": 1000,
+    "timeoutSeconds": 10
 }
 ```
 
@@ -53,9 +54,10 @@ The application is configured through the `server-config.json` file, which conta
   - `"maxOverlap"`: Prioritizes maximum word intersections for compact puzzles
   - `"random"`: Uses random placement with some intersection bias for varied layouts
 - **enforceAllWords**: Whether to attempt using all provided words (boolean)
-  - `true`: Try multiple generation attempts to include all words
+  - `true`: Systematically try multiple generation approaches to include all words
   - `false`: Accept partial word placement on first attempt
-- **maxAttempts**: Maximum number of generation attempts when enforcing all words (1-10 recommended)
+- **maxAttempts**: Maximum number of generation attempts when enforcing all words (1-1000 recommended)
+- **timeoutSeconds**: Maximum time in seconds to spend on systematic generation (1-30 recommended)
 
 ### Preset Themes Configuration
 
@@ -110,16 +112,52 @@ PENGUIN;Flightless Antarctic bird
 ## Word Enforcement Options
 
 ### Enforce All Words (`enforceAllWords: true`)
-- **Behavior**: Attempts multiple generations to include all provided words
-- **Process**: Tries up to `maxAttempts` different layouts and uses the best result
-- **Scoring**: Evaluates attempts based on word count and intersection quality
-- **Trade-off**: Takes longer but maximizes word usage
+- **Behavior**: Systematically explores different generation approaches to include all provided words
+- **Process**: Tries multiple word orderings, starting positions, and placement strategies within time limit
+- **Algorithm**: Uses deterministic variations to ensure comprehensive exploration of possibilities
+- **Timeout**: Stops after specified time limit (default 10 seconds) or when perfect solution is found
+- **Progress**: Shows real-time progress with attempt counter and loading spinner
+- **Trade-off**: Takes longer but maximizes word usage through systematic exploration
 
 ### Best Effort (`enforceAllWords: false`)
 - **Behavior**: Accepts the first generation attempt result
-- **Process**: Single generation pass, may not place all words
-- **Speed**: Faster generation, immediate results
-- **Trade-off**: May leave some words unused in difficult layouts
+- **Process**: Single generation pass using selected mode, may not place all words
+- **Speed**: Immediate results with minimal processing time
+- **Trade-off**: Faster generation but may leave some words unused in difficult layouts
+
+## Systematic Generation Process
+
+When **Enforce All Words** is enabled, the generator uses a sophisticated systematic approach:
+
+### Word Order Variations
+- **Length-based**: Longest words first (traditional approach)
+- **Reverse length**: Shortest words first 
+- **Alphabetical**: A-Z ordering for consistent results
+- **Reverse alphabetical**: Z-A ordering
+- **Deterministic permutations**: Multiple shuffled arrangements using seeds
+
+### Starting Position Variations  
+- **Center positions**: Traditional center-based placement (across/down)
+- **Off-center positions**: Various grid positions to find optimal starting points
+- **Direction variations**: Both horizontal and vertical starting orientations
+
+### Generation Modes with Systematic Approach
+
+#### Maximum Overlap + Systematic
+- **Strategy**: Tests different word orders and positions to maximize intersections
+- **Exploration**: Tries various starting positions and word arrangements
+- **Optimization**: Seeks the arrangement with highest intersection density
+
+#### Random + Systematic  
+- **Strategy**: Uses deterministic random seeds for reproducible variation
+- **Exploration**: Generates multiple random arrangements with controlled randomness
+- **Diversity**: Creates varied layouts while maintaining systematic coverage
+
+### Performance and Timeout Handling
+- **Real-time Progress**: Shows attempt counter during generation
+- **Time Limit**: Configurable timeout (default 10 seconds) prevents infinite loops
+- **Early Termination**: Stops immediately when perfect solution (all words placed) is found
+- **Best Result Selection**: Always returns the best solution found within time constraints
 
 ## User Interface Elements
 

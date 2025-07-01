@@ -6,6 +6,7 @@ class CrosswordGenerator {
         this.wordNumbers = {};
         this.currentNumber = 1;
         this.words = [];
+        this.showAnswers = false; // Track whether answers are visible
         
         this.initializeGrid();
         this.setupEventListeners();
@@ -24,12 +25,14 @@ class CrosswordGenerator {
         const clearBtn = document.getElementById('clearBtn');
         const printBtn = document.getElementById('printBtn');
         const loadPresetBtn = document.getElementById('loadPresetBtn');
+        const toggleAnswersBtn = document.getElementById('toggleAnswersBtn');
 
         addWordBtn.addEventListener('click', () => this.addWord());
         generateBtn.addEventListener('click', () => this.generateCrossword());
         clearBtn.addEventListener('click', () => this.clearAll());
         printBtn.addEventListener('click', () => this.printCrossword());
         loadPresetBtn.addEventListener('click', () => this.loadPreset());
+        toggleAnswersBtn.addEventListener('click', () => this.toggleAnswers());
 
         // Allow Enter key to add words
         [wordInput, clueInput].forEach(input => {
@@ -172,13 +175,16 @@ class CrosswordGenerator {
     updateButtons() {
         const generateBtn = document.getElementById('generateBtn');
         const printBtn = document.getElementById('printBtn');
+        const toggleAnswersBtn = document.getElementById('toggleAnswersBtn');
         
         generateBtn.disabled = this.words.length < 2;
         printBtn.disabled = this.placements.length === 0;
+        toggleAnswersBtn.disabled = this.placements.length === 0;
     }
 
     clearAll() {
         this.words = [];
+        this.showAnswers = false;
         this.reset();
         this.updateWordsList();
         this.updateButtons();
@@ -329,6 +335,7 @@ class CrosswordGenerator {
         // Use setTimeout to allow UI update
         setTimeout(() => {
             this.reset();
+            this.showAnswers = false; // Reset answer visibility when generating new crossword
             
             // Sort words by length (longer first)
             const sortedWords = [...this.words].sort((a, b) => b.word.length - a.word.length);
@@ -375,6 +382,10 @@ class CrosswordGenerator {
             this.displayCrossword();
             this.displayClues();
             this.updateButtons();
+            
+            // Reset toggle button text
+            const toggleAnswersBtn = document.getElementById('toggleAnswersBtn');
+            toggleAnswersBtn.textContent = '👁️ Show Answers';
             
             // Restore button
             generateBtn.textContent = originalText;
@@ -426,9 +437,10 @@ class CrosswordGenerator {
                 const number = this.wordNumbers[key];
                 
                 if (cell !== '') {
-                    gridHTML += `<div class="grid-cell filled">
+                    const displayLetter = this.showAnswers ? cell : '';
+                    gridHTML += `<div class="grid-cell filled ${this.showAnswers ? 'with-answer' : 'puzzle-mode'}">
                         ${number ? `<span class="number">${number}</span>` : ''}
-                        ${cell}
+                        <span class="letter">${displayLetter}</span>
                     </div>`;
                 } else {
                     gridHTML += '<div class="grid-cell empty"></div>';
@@ -535,6 +547,24 @@ class CrosswordGenerator {
                 message.remove();
             }
         }, 3000);
+    }
+
+    toggleAnswers() {
+        if (this.placements.length === 0) {
+            this.showMessage('Generate a crossword first', 'error');
+            return;
+        }
+
+        this.showAnswers = !this.showAnswers;
+        this.displayCrossword();
+        
+        const toggleBtn = document.getElementById('toggleAnswersBtn');
+        toggleBtn.textContent = this.showAnswers ? '🙈 Hide Answers' : '👁️ Show Answers';
+        
+        this.showMessage(
+            this.showAnswers ? 'Answer key visible' : 'Answer key hidden', 
+            'success'
+        );
     }
 }
 

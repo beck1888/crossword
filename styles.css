@@ -286,6 +286,41 @@ button:disabled {
     color: #555;
 }
 
+/* Answer key toggle styles */
+.grid-cell.puzzle-mode {
+    background: #f8f9fa;
+}
+
+.grid-cell.with-answer {
+    background: #e3f2fd;
+}
+
+.grid-cell .letter {
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.grid-cell.puzzle-mode .letter {
+    color: transparent;
+}
+
+.grid-cell.with-answer .letter {
+    color: #1976d2;
+}
+
+/* Improved button styling for answer toggle */
+#toggleAnswersBtn {
+    background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+}
+
+#toggleAnswersBtn:hover {
+    background: linear-gradient(135deg, #f57c00 0%, #e65100 100%);
+}
+
+#toggleAnswersBtn:disabled {
+    background: #ccc;
+}
+
 /* Print Styles */
 .print-only {
     display: none;

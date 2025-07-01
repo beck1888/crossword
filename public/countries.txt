@@ -1,0 +1,8 @@
+USA;United States of America
+CANADA;Northern neighbor of USA
+FRANCE;Country of the Eiffel Tower
+JAPAN;Land of the rising sun
+BRAZIL;Largest South American country
+ITALY;Boot-shaped European country
+SPAIN;Country where flamenco originated
+CHINA;Most populous country

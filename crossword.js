@@ -11,6 +11,7 @@ class CrosswordGenerator {
         this.initializeGrid();
         this.setupEventListeners();
         this.loadPresets();
+        this.populatePresetSelect();
     }
 
     initializeGrid() {
@@ -43,48 +44,52 @@ class CrosswordGenerator {
     }
 
     loadPresets() {
-        this.presets = {
-            animals: [
-                { word: 'CAT', clue: 'Domestic feline pet' },
-                { word: 'DOG', clue: 'Man\'s best friend' },
-                { word: 'ELEPHANT', clue: 'Largest land mammal' },
-                { word: 'TIGER', clue: 'Orange striped big cat' },
-                { word: 'RABBIT', clue: 'Hopping mammal with long ears' },
-                { word: 'HORSE', clue: 'Riding animal' },
-                { word: 'BIRD', clue: 'Flying animal with feathers' },
-                { word: 'FISH', clue: 'Swimming animal with gills' }
-            ],
-            colors: [
-                { word: 'RED', clue: 'Color of fire' },
-                { word: 'BLUE', clue: 'Color of the sky' },
-                { word: 'GREEN', clue: 'Color of grass' },
-                { word: 'YELLOW', clue: 'Color of the sun' },
-                { word: 'PURPLE', clue: 'Mix of red and blue' },
-                { word: 'ORANGE', clue: 'Color of a carrot' },
-                { word: 'BLACK', clue: 'Absence of color' },
-                { word: 'WHITE', clue: 'Color of snow' }
-            ],
-            countries: [
-                { word: 'USA', clue: 'United States of America' },
-                { word: 'CANADA', clue: 'Northern neighbor of USA' },
-                { word: 'FRANCE', clue: 'Country of the Eiffel Tower' },
-                { word: 'JAPAN', clue: 'Land of the rising sun' },
-                { word: 'BRAZIL', clue: 'Largest South American country' },
-                { word: 'ITALY', clue: 'Boot-shaped European country' },
-                { word: 'SPAIN', clue: 'Country where flamenco originated' },
-                { word: 'CHINA', clue: 'Most populous country' }
-            ],
-            sports: [
-                { word: 'SOCCER', clue: 'World\'s most popular sport' },
-                { word: 'TENNIS', clue: 'Sport played at Wimbledon' },
-                { word: 'GOLF', clue: 'Sport with clubs and holes' },
-                { word: 'BASEBALL', clue: 'America\'s pastime' },
-                { word: 'HOCKEY', clue: 'Sport played on ice' },
-                { word: 'BOXING', clue: 'Fighting sport with gloves' },
-                { word: 'SWIMMING', clue: 'Water sport' },
-                { word: 'RUNNING', clue: 'Track and field activity' }
-            ]
+        // Hash map of preset files and their display names
+        this.presetFiles = {
+            'animals': 'Animals',
+            'colors': 'Colors', 
+            'countries': 'Countries',
+            'sports': 'Sports'
         };
+        
+        // Initialize empty presets object that will be populated when files are loaded
+        this.presets = {};
+    }
+
+    /**
+     * Load preset word list from text file
+     * Parses semicolon-delimited format: WORD;Clue description
+     */
+    async loadPresetFromFile(filename) {
+        try {
+            const response = await fetch(`public/${filename}.txt`);
+            if (!response.ok) {
+                throw new Error(`Failed to load ${filename}.txt`);
+            }
+            
+            const text = await response.text();
+            const words = [];
+            
+            // Parse each line: WORD;Clue description
+            const lines = text.trim().split('\n');
+            for (const line of lines) {
+                if (line.trim()) {
+                    const [word, clue] = line.split(';');
+                    if (word && clue) {
+                        words.push({ 
+                            word: word.trim().toUpperCase(), 
+                            clue: clue.trim() 
+                        });
+                    }
+                }
+            }
+            
+            return words;
+        } catch (error) {
+            console.error(`Error loading preset ${filename}:`, error);
+            this.showMessage(`Failed to load ${filename} preset`, 'error');
+            return [];
+        }
     }
 
     addWord() {
@@ -126,7 +131,7 @@ class CrosswordGenerator {
         this.showMessage(`Added "${word}"`, 'success');
     }
 
-    loadPreset() {
+    async loadPreset() {
         const presetSelect = document.getElementById('presetSelect');
         const selectedPreset = presetSelect.value;
 
@@ -135,12 +140,55 @@ class CrosswordGenerator {
             return;
         }
 
-        this.words = [...this.presets[selectedPreset]];
-        this.updateWordsList();
-        this.updateButtons();
+        // Show loading state
+        const loadPresetBtn = document.getElementById('loadPresetBtn');
+        const originalText = loadPresetBtn.textContent;
+        loadPresetBtn.innerHTML = 'Loading... <span class="loading"></span>';
+        loadPresetBtn.disabled = true;
+
+        try {
+            // Load preset from file if not already cached
+            if (!this.presets[selectedPreset]) {
+                this.presets[selectedPreset] = await this.loadPresetFromFile(selectedPreset);
+            }
+
+            // Use the loaded preset
+            this.words = [...this.presets[selectedPreset]];
+            this.updateWordsList();
+            this.updateButtons();
+            
+            presetSelect.value = '';
+            
+            const displayName = this.presetFiles[selectedPreset] || selectedPreset;
+            this.showMessage(`Loaded ${displayName} theme with ${this.words.length} words`, 'success');
+        } catch (error) {
+            console.error('Error loading preset:', error);
+            this.showMessage('Failed to load preset theme', 'error');
+        } finally {
+            // Restore button state
+            loadPresetBtn.textContent = originalText;
+            loadPresetBtn.disabled = false;
+        }
+   }
+
+    /**
+     * Populate the preset select dropdown with options from the presetFiles hash map
+     */
+    populatePresetSelect() {
+        const presetSelect = document.getElementById('presetSelect');
         
-        presetSelect.value = '';
-        this.showMessage(`Loaded ${selectedPreset} theme with ${this.words.length} words`, 'success');
+        // Clear existing options except the default one
+        while (presetSelect.children.length > 1) {
+            presetSelect.removeChild(presetSelect.lastChild);
+        }
+        
+        // Add options from the hash map
+        for (const [filename, displayName] of Object.entries(this.presetFiles)) {
+            const option = document.createElement('option');
+            option.value = filename;
+            option.textContent = displayName;
+            presetSelect.appendChild(option);
+        }
     }
 
     updateWordsList() {

@@ -1,0 +1,8 @@
+CAT;Domestic feline pet
+DOG;Man's best friend
+ELEPHANT;Largest land mammal
+TIGER;Orange striped big cat
+RABBIT;Hopping mammal with long ears
+HORSE;Riding animal
+BIRD;Flying animal with feathers
+FISH;Swimming animal with gills

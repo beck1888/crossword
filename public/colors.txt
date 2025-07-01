@@ -1,0 +1,9 @@
+RED;Color of fire
+BLUE;Color of the sky
+GREEN;Color of grass
+YELLOW;Color of the sun
+PURPLE;Mix of red and blue
+ORANGE;Color of a carrot
+BLACK;Absence of color
+WHITE;Color of snow
+TEAL;A blue-green color

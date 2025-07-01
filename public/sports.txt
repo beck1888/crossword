@@ -1,0 +1,8 @@
+SOCCER;World's most popular sport
+TENNIS;Sport played at Wimbledon
+GOLF;Sport with clubs and holes
+BASEBALL;America's pastime
+HOCKEY;Sport played on ice
+BOXING;Fighting sport with gloves
+SWIMMING;Water sport
+RUNNING;Track and field activity

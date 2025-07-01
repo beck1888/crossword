@@ -1,6 +1,8 @@
 class CrosswordGenerator {
     constructor() {
-        this.gridSize = 25; // Increased for longer words
+        // Configuration will be loaded from server-config.json
+        this.config = null;
+        this.gridSize = 25; // Default value, will be updated from config
         this.grid = [];
         this.placements = [];
         this.wordNumbers = {};
@@ -8,10 +10,48 @@ class CrosswordGenerator {
         this.words = [];
         this.showAnswers = false; // Track whether answers are visible
         
-        this.initializeGrid();
-        this.setupEventListeners();
-        this.loadPresets();
-        this.populatePresetSelect();
+        // Load configuration first, then initialize everything else
+        this.loadConfiguration();
+    }
+
+    /**
+     * Load configuration from server-config.json
+     * This must be called before initializing other components
+     */
+    async loadConfiguration() {
+        try {
+            const response = await fetch('server-config.json');
+            if (!response.ok) {
+                throw new Error('Failed to load server configuration');
+            }
+            
+            this.config = await response.json();
+            
+            // Update grid size from config with validation
+            const gridConfig = this.config.gridSize;
+            this.gridSize = Math.max(gridConfig.min, Math.min(gridConfig.max, gridConfig.default));
+            
+            // Now initialize everything else
+            this.initializeGrid();
+            this.setupEventListeners();
+            this.populatePresetSelect();
+            
+        } catch (error) {
+            console.error('Error loading configuration:', error);
+            this.showMessage('Failed to load configuration. Using default settings.', 'error');
+            
+            // Fall back to default configuration
+            this.config = {
+                gridSize: { default: 25, min: 10, max: 50 },
+                presets: {}
+            };
+            this.gridSize = 25;
+            
+            // Initialize with defaults
+            this.initializeGrid();
+            this.setupEventListeners();
+            this.populatePresetSelect();
+        }
     }
 
     initializeGrid() {
@@ -43,28 +83,21 @@ class CrosswordGenerator {
         });
     }
 
-    loadPresets() {
-        // Hash map of preset files and their display names
-        this.presetFiles = {
-            'animals': 'Animals',
-            'colors': 'Colors', 
-            'countries': 'Countries',
-            'sports': 'Sports'
-        };
-        
-        // Initialize empty presets object that will be populated when files are loaded
-        this.presets = {};
-    }
-
     /**
      * Load preset word list from text file
      * Parses semicolon-delimited format: WORD;Clue description
      */
-    async loadPresetFromFile(filename) {
+    async loadPresetFromFile(presetKey) {
         try {
-            const response = await fetch(`public/${filename}.txt`);
+            // Get file path from configuration
+            const presetConfig = this.config.presets[presetKey];
+            if (!presetConfig) {
+                throw new Error(`Preset ${presetKey} not found in configuration`);
+            }
+            
+            const response = await fetch(presetConfig.filePath);
             if (!response.ok) {
-                throw new Error(`Failed to load ${filename}.txt`);
+                throw new Error(`Failed to load ${presetConfig.filePath}`);
             }
             
             const text = await response.text();
@@ -86,8 +119,8 @@ class CrosswordGenerator {
             
             return words;
         } catch (error) {
-            console.error(`Error loading preset ${filename}:`, error);
-            this.showMessage(`Failed to load ${filename} preset`, 'error');
+            console.error(`Error loading preset ${presetKey}:`, error);
+            this.showMessage(`Failed to load ${presetKey} preset`, 'error');
             return [];
         }
     }
@@ -104,8 +137,8 @@ class CrosswordGenerator {
             return;
         }
 
-        if (word.length > 25) {
-            this.showMessage('Word must be 25 characters or less', 'error');
+        if (word.length > this.config.gridSize.max) {
+            this.showMessage(`Word must be ${this.config.gridSize.max} characters or less`, 'error');
             return;
         }
 
@@ -148,6 +181,9 @@ class CrosswordGenerator {
 
         try {
             // Load preset from file if not already cached
+            if (!this.presets) {
+                this.presets = {};
+            }
             if (!this.presets[selectedPreset]) {
                 this.presets[selectedPreset] = await this.loadPresetFromFile(selectedPreset);
             }
@@ -172,7 +208,7 @@ class CrosswordGenerator {
    }
 
     /**
-     * Populate the preset select dropdown with options from the presetFiles hash map
+     * Populate the preset select dropdown with options from the configuration
      */
     populatePresetSelect() {
         const presetSelect = document.getElementById('presetSelect');
@@ -182,12 +218,14 @@ class CrosswordGenerator {
             presetSelect.removeChild(presetSelect.lastChild);
         }
         
-        // Add options from the hash map
-        for (const [filename, displayName] of Object.entries(this.presetFiles)) {
-            const option = document.createElement('option');
-            option.value = filename;
-            option.textContent = displayName;
-            presetSelect.appendChild(option);
+        // Add options from the configuration
+        if (this.config && this.config.presets) {
+            for (const [presetKey, presetConfig] of Object.entries(this.config.presets)) {
+                const option = document.createElement('option');
+                option.value = presetKey;
+                option.textContent = presetConfig.displayName;
+                presetSelect.appendChild(option);
+            }
         }
     }
 

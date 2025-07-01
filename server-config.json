@@ -1,0 +1,25 @@
+{
+    "gridSize": {
+        "default": 25,
+        "min": 10,
+        "max": 50
+    },
+    "presets": {
+        "animals": {
+            "displayName": "Animals",
+            "filePath": "public/animals.txt"
+        },
+        "colors": {
+            "displayName": "Colors",
+            "filePath": "public/colors.txt"
+        },
+        "countries": {
+            "displayName": "Countries",
+            "filePath": "public/countries.txt"
+        },
+        "sports": {
+            "displayName": "Sports",
+            "filePath": "public/sports.txt"
+        }
+    }
+}

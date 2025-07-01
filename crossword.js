@@ -1070,6 +1070,9 @@ class CrosswordGenerator {
             return;
         }
         
+        // Clear all toasts before printing
+        this.clearAllToasts();
+        
         // Create print version
         this.createPrintVersion();
         
@@ -1187,6 +1190,19 @@ class CrosswordGenerator {
                     toast.parentNode.removeChild(toast);
                 }
             }, 300); // Wait for animation to complete
+        }
+    }
+
+    /**
+     * Clear all toast notifications immediately
+     */
+    clearAllToasts() {
+        const toastContainer = document.getElementById('toastContainer');
+        if (toastContainer) {
+            // Remove all toast elements immediately
+            while (toastContainer.firstChild) {
+                toastContainer.removeChild(toastContainer.firstChild);
+            }
         }
     }
 

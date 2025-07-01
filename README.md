@@ -191,9 +191,14 @@ When **Enforce All Words** is enabled, the generator uses a sophisticated system
 ```
 crossword/
 ├── index.html          # Main application interface
-├── crossword.js        # Core crossword generation logic
+├── crossword.js        # Main script, orchestrates the modules
 ├── styles.css          # Application styling
 ├── server-config.json  # Configuration file
+├── src/                # Modular JavaScript source files
+│   ├── config.js       # Handles loading configuration
+│   ├── generator.js    # Core crossword generation logic
+│   ├── ui.js           # Manages UI updates and interactions
+│   └── utils.js        # Utility functions
 └── public/             # Preset word files
     ├── animals.txt
     ├── colors.txt
@@ -201,15 +206,28 @@ crossword/
     └── sports.txt
 ```
 
-### Key Classes and Methods
+### Key Modules and Functions
 
-#### CrosswordGenerator Class
-- **loadConfiguration()**: Loads and applies server configuration
-- **generateCrossword()**: Main generation method with mode support
-- **generateSingleCrossword()**: Single attempt generation logic
-- **scoreCrosswordResult()**: Evaluates generation attempt quality
-- **placeWord()**: Places word on grid with intersection validation
-- **findIntersections()**: Calculates possible word intersections
+The application logic is split into several modules to improve maintainability.
+
+#### `crossword.js`
+- **CrosswordGenerator Class**: The main class that initializes the application and ties all the modules together. It handles user interactions and manages the overall state.
+
+#### `src/config.js`
+- **loadConfiguration()**: Loads and parses `server-config.json`.
+
+#### `src/generator.js`
+- **generateCrosswordWithSystematicAttempts()**: The core generation function that handles systematic attempts, timeouts, and scoring.
+- **generateSingleCrosswordWithSeed()**: Creates a single crossword layout based on a given seed.
+
+#### `src/ui.js`
+- **displayCrossword()**: Renders the crossword grid.
+- **displayClues()**: Renders the across and down clues.
+- **updateWordsList()**: Updates the list of added words.
+- **createPrintVersion()**: Prepares the crossword for printing.
+
+#### `src/utils.js`
+- **deterministicShuffle()**: Shuffles an array in a deterministic way based on a seed.
 
 ### Browser Compatibility
 - **Modern Browsers**: Chrome, Firefox, Safari, Edge (recent versions)

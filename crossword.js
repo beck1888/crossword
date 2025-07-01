@@ -35,6 +35,7 @@ class CrosswordGenerator {
             this.initializeGrid();
             this.setupEventListeners();
             this.populatePresetSelect();
+            this.initializeGenerationOptions();
             
         } catch (error) {
             console.error('Error loading configuration:', error);
@@ -43,6 +44,7 @@ class CrosswordGenerator {
             // Fall back to default configuration
             this.config = {
                 gridSize: { default: 25, min: 10, max: 50 },
+                generation: { mode: 'maxOverlap', enforceAllWords: true, maxAttempts: 5 },
                 presets: {}
             };
             this.gridSize = 25;
@@ -51,6 +53,7 @@ class CrosswordGenerator {
             this.initializeGrid();
             this.setupEventListeners();
             this.populatePresetSelect();
+            this.initializeGenerationOptions();
         }
     }
 
@@ -226,6 +229,22 @@ class CrosswordGenerator {
                 option.textContent = presetConfig.displayName;
                 presetSelect.appendChild(option);
             }
+        }
+    }
+
+    /**
+     * Initialize generation options UI elements with values from configuration
+     */
+    initializeGenerationOptions() {
+        const generationModeSelect = document.getElementById('generationMode');
+        const enforceAllWordsCheckbox = document.getElementById('enforceAllWords');
+        
+        if (this.config && this.config.generation) {
+            // Set generation mode
+            generationModeSelect.value = this.config.generation.mode || 'maxOverlap';
+            
+            // Set enforce all words option
+            enforceAllWordsCheckbox.checked = this.config.generation.enforceAllWords !== false;
         }
     }
 
@@ -406,11 +425,19 @@ class CrosswordGenerator {
         return placements;
     }
 
+    /**
+     * Generate crossword using the selected generation mode and options
+     */
     generateCrossword() {
         if (this.words.length < 2) {
             this.showMessage('Need at least 2 words to generate crossword', 'error');
             return;
         }
+
+        // Get generation options from UI
+        const generationMode = document.getElementById('generationMode').value;
+        const enforceAllWords = document.getElementById('enforceAllWords').checked;
+        const maxAttempts = this.config?.generation?.maxAttempts || 5;
 
         // Show loading
         const generateBtn = document.getElementById('generateBtn');
@@ -420,51 +447,38 @@ class CrosswordGenerator {
 
         // Use setTimeout to allow UI update
         setTimeout(() => {
-            this.reset();
-            this.showAnswers = false; // Reset answer visibility when generating new crossword
+            let bestResult = null;
+            let bestScore = 0;
             
-            // Sort words by length (longer first)
-            const sortedWords = [...this.words].sort((a, b) => b.word.length - a.word.length);
+            // Try multiple attempts if enforcing all words or using random mode
+            const attempts = enforceAllWords ? maxAttempts : 1;
             
-            // Place first word in center
-            const firstWord = sortedWords[0];
-            const centerRow = Math.floor(this.gridSize / 2);
-            const centerCol = Math.max(0, Math.floor((this.gridSize - firstWord.word.length) / 2));
-            
-            this.placeWord(firstWord.word, firstWord.clue, centerRow, centerCol, 'across');
-            const placedWords = new Set([firstWord.word]);
-            
-            // Try to place remaining words
-            for (let i = 1; i < sortedWords.length; i++) {
-                const wordData = sortedWords[i];
-                const word = wordData.word;
+            for (let attempt = 0; attempt < attempts; attempt++) {
+                this.reset();
+                const result = this.generateSingleCrossword(generationMode);
                 
-                if (placedWords.has(word)) continue;
+                // Score the result based on number of words placed and intersections
+                const score = this.scoreCrosswordResult(result);
                 
-                let bestPlacement = null;
-                let maxIntersections = 0;
-                
-                // Try to intersect with existing words
-                for (const existingPlacement of this.placements) {
-                    const possiblePlacements = this.getIntersectionPlacements(word, existingPlacement);
-                    
-                    for (const [startRow, startCol, direction] of possiblePlacements) {
-                        const intersections = this.findIntersections(word, existingPlacement.word).length;
-                        
-                        if (intersections > maxIntersections) {
-                            maxIntersections = intersections;
-                            bestPlacement = [startRow, startCol, direction];
-                        }
-                    }
+                // If we got all words, use this result immediately
+                if (result.placedWords.size === this.words.length) {
+                    bestResult = result;
+                    break;
                 }
                 
-                if (bestPlacement) {
-                    const [startRow, startCol, direction] = bestPlacement;
-                    this.placeWord(word, wordData.clue, startRow, startCol, direction);
-                    placedWords.add(word);
+                // Otherwise, keep track of the best result so far
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestResult = result;
                 }
             }
             
+            // Apply the best result
+            if (bestResult) {
+                this.applyGenerationResult(bestResult);
+            }
+            
+            this.showAnswers = false; // Reset answer visibility when generating new crossword
             this.displayCrossword();
             this.displayClues();
             this.updateButtons();
@@ -482,10 +496,152 @@ class CrosswordGenerator {
             
             if (placedCount === totalCount) {
                 this.showMessage(`Successfully generated crossword with all ${placedCount} words!`, 'success');
+            } else if (enforceAllWords && attempts > 1) {
+                this.showMessage(`Generated crossword with ${placedCount} out of ${totalCount} words after ${attempts} attempts`, 'warning');
             } else {
                 this.showMessage(`Generated crossword with ${placedCount} out of ${totalCount} words`, 'warning');
             }
         }, 100);
+    }
+
+    /**
+     * Generate a single crossword attempt using the specified mode
+     * @param {string} mode - Generation mode: 'maxOverlap' or 'random'
+     * @returns {Object} Result object with placements and placed words
+     */
+    generateSingleCrossword(mode) {
+        const result = {
+            placements: [],
+            placedWords: new Set(),
+            wordNumbers: {},
+            currentNumber: 1
+        };
+        
+        // Sort words based on generation mode
+        let sortedWords;
+        if (mode === 'random') {
+            // Shuffle words randomly
+            sortedWords = [...this.words].sort(() => Math.random() - 0.5);
+        } else {
+            // Default: sort by length (longer first) for maximum overlap
+            sortedWords = [...this.words].sort((a, b) => b.word.length - a.word.length);
+        }
+        
+        // Place first word in center
+        const firstWord = sortedWords[0];
+        const centerRow = Math.floor(this.gridSize / 2);
+        const centerCol = Math.max(0, Math.floor((this.gridSize - firstWord.word.length) / 2));
+        
+        this.placeWordForResult(result, firstWord.word, firstWord.clue, centerRow, centerCol, 'across');
+        
+        // Try to place remaining words
+        for (let i = 1; i < sortedWords.length; i++) {
+            const wordData = sortedWords[i];
+            const word = wordData.word;
+            
+            if (result.placedWords.has(word)) continue;
+            
+            let bestPlacement = null;
+            let bestScore = 0;
+            
+            // Try to intersect with existing words
+            for (const existingPlacement of result.placements) {
+                const possiblePlacements = this.getIntersectionPlacements(word, existingPlacement);
+                
+                for (const [startRow, startCol, direction] of possiblePlacements) {
+                    let score;
+                    
+                    if (mode === 'random') {
+                        // Random mode: use random scoring with bias toward intersections
+                        const intersections = this.findIntersections(word, existingPlacement.word).length;
+                        score = Math.random() * 100 + intersections * 10;
+                    } else {
+                        // Max overlap mode: prioritize maximum intersections
+                        score = this.findIntersections(word, existingPlacement.word).length;
+                    }
+                    
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestPlacement = [startRow, startCol, direction];
+                    }
+                }
+            }
+            
+            if (bestPlacement) {
+                const [startRow, startCol, direction] = bestPlacement;
+                this.placeWordForResult(result, word, wordData.clue, startRow, startCol, direction);
+            }
+        }
+        
+        return result;
+    }
+
+    /**
+     * Place a word in the result object (used during generation attempts)
+     * @param {Object} result - Result object to modify
+     * @param {string} word - Word to place
+     * @param {string} clue - Clue for the word
+     * @param {number} startRow - Starting row position
+     * @param {number} startCol - Starting column position
+     * @param {string} direction - Direction: 'across' or 'down'
+     */
+    placeWordForResult(result, word, clue, startRow, startCol, direction) {
+        const placement = {
+            word: word,
+            clue: clue,
+            startRow: startRow,
+            startCol: startCol,
+            direction: direction,
+            number: result.currentNumber
+        };
+        
+        result.placements.push(placement);
+        result.wordNumbers[`${startRow}-${startCol}`] = result.currentNumber;
+        result.currentNumber++;
+        result.placedWords.add(word);
+        
+        // Place letters on grid
+        for (let i = 0; i < word.length; i++) {
+            if (direction === 'across') {
+                this.grid[startRow][startCol + i] = word[i];
+            } else {
+                this.grid[startRow + i][startCol] = word[i];
+            }
+        }
+    }
+
+    /**
+     * Score a crossword generation result
+     * @param {Object} result - Result object to score
+     * @returns {number} Score value (higher is better)
+     */
+    scoreCrosswordResult(result) {
+        // Base score: number of words placed
+        let score = result.placedWords.size * 100;
+        
+        // Bonus for intersections
+        let intersectionCount = 0;
+        for (let i = 0; i < result.placements.length; i++) {
+            for (let j = i + 1; j < result.placements.length; j++) {
+                intersectionCount += this.findIntersections(
+                    result.placements[i].word, 
+                    result.placements[j].word
+                ).length;
+            }
+        }
+        score += intersectionCount * 10;
+        
+        return score;
+    }
+
+    /**
+     * Apply a generation result to the current crossword state
+     * @param {Object} result - Result object to apply
+     */
+    applyGenerationResult(result) {
+        this.placements = result.placements;
+        this.wordNumbers = result.wordNumbers;
+        this.currentNumber = result.currentNumber;
     }
 
     getGridBounds() {

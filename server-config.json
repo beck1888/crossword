@@ -4,6 +4,11 @@
         "min": 10,
         "max": 50
     },
+    "generation": {
+        "mode": "maxOverlap",
+        "enforceAllWords": true,
+        "maxAttempts": 5
+    },
     "presets": {
         "animals": {
             "displayName": "Animals",

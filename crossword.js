@@ -2,6 +2,7 @@ class CrosswordGenerator {
     constructor() {
         // Configuration will be loaded from server-config.json
         this.config = null;
+        this.configLoaded = false; // Track configuration loading state
         this.gridSize = 25; // Default value, will be updated from config
         this.grid = [];
         this.placements = [];
@@ -31,23 +32,34 @@ class CrosswordGenerator {
             const gridConfig = this.config.gridSize;
             this.gridSize = Math.max(gridConfig.min, Math.min(gridConfig.max, gridConfig.default));
             
+            // Mark configuration as loaded
+            this.configLoaded = true;
+            
             // Now initialize everything else
             this.initializeGrid();
             this.setupEventListeners();
             this.populatePresetSelect();
             this.initializeGenerationOptions();
             
+            console.log('Configuration loaded successfully');
+            
         } catch (error) {
             console.error('Error loading configuration:', error);
-            this.showMessage('Failed to load configuration. Using default settings.', 'error');
+            this.showMessage('Failed to load configuration. Using default settings.', 'error', false);
             
             // Fall back to default configuration
             this.config = {
                 gridSize: { default: 25, min: 10, max: 50 },
-                generation: { mode: 'maxOverlap', enforceAllWords: true, maxAttempts: 5 },
+                generation: { 
+                    mode: 'maxOverlap', 
+                    enforceAllWords: true, 
+                    maxAttempts: 1000,
+                    timeoutSeconds: 10
+                },
                 presets: {}
             };
             this.gridSize = 25;
+            this.configLoaded = true; // Mark as loaded even with defaults
             
             // Initialize with defaults
             this.initializeGrid();
@@ -89,43 +101,61 @@ class CrosswordGenerator {
     /**
      * Load preset word list from text file
      * Parses semicolon-delimited format: WORD;Clue description
+     * @param {string} presetKey - Key identifying the preset in configuration
+     * @returns {Array} Array of word objects with word and clue properties
      */
     async loadPresetFromFile(presetKey) {
-        try {
-            // Get file path from configuration
-            const presetConfig = this.config.presets[presetKey];
-            if (!presetConfig) {
-                throw new Error(`Preset ${presetKey} not found in configuration`);
-            }
-            
-            const response = await fetch(presetConfig.filePath);
-            if (!response.ok) {
-                throw new Error(`Failed to load ${presetConfig.filePath}`);
-            }
-            
-            const text = await response.text();
-            const words = [];
-            
-            // Parse each line: WORD;Clue description
-            const lines = text.trim().split('\n');
-            for (const line of lines) {
-                if (line.trim()) {
-                    const [word, clue] = line.split(';');
-                    if (word && clue) {
-                        words.push({ 
-                            word: word.trim().toUpperCase(), 
-                            clue: clue.trim() 
-                        });
+        // Get file path from configuration
+        const presetConfig = this.config.presets[presetKey];
+        if (!presetConfig) {
+            throw new Error(`Preset ${presetKey} not found in configuration`);
+        }
+
+        // Fetch the preset file
+        const response = await fetch(presetConfig.filePath);
+        if (!response.ok) {
+            throw new Error(`Failed to load ${presetConfig.filePath} (Status: ${response.status})`);
+        }
+
+        // Parse the file content
+        const text = await response.text();
+        if (!text || text.trim().length === 0) {
+            throw new Error(`Preset file ${presetConfig.filePath} is empty`);
+        }
+
+        const words = [];
+        const lines = text.trim().split('\n');
+        let validLineCount = 0;
+
+        // Parse each line: WORD;Clue description
+        for (const line of lines) {
+            const trimmedLine = line.trim();
+            if (trimmedLine && !trimmedLine.startsWith('#')) { // Skip empty lines and comments
+                const parts = trimmedLine.split(';');
+                if (parts.length >= 2) {
+                    const word = parts[0].trim().toUpperCase();
+                    const clue = parts.slice(1).join(';').trim(); // Handle semicolons in clues
+                    
+                    // Validate word format
+                    if (word && clue && /^[A-Z]+$/.test(word)) {
+                        words.push({ word, clue });
+                        validLineCount++;
+                    } else {
+                        console.warn(`Skipping invalid line in ${presetKey}: "${trimmedLine}"`);
                     }
+                } else {
+                    console.warn(`Skipping malformed line in ${presetKey}: "${trimmedLine}"`);
                 }
             }
-            
-            return words;
-        } catch (error) {
-            console.error(`Error loading preset ${presetKey}:`, error);
-            this.showMessage(`Failed to load ${presetKey} preset`, 'error');
-            return [];
         }
+
+        // Validate that we got some words
+        if (words.length === 0) {
+            throw new Error(`No valid word entries found in ${presetConfig.filePath}`);
+        }
+
+        console.log(`Loaded ${words.length} words from ${presetKey} preset (${validLineCount}/${lines.length} lines processed)`);
+        return words;
     }
 
     addWord() {
@@ -136,22 +166,22 @@ class CrosswordGenerator {
         const clue = clueInput.value.trim();
 
         if (!word || !clue) {
-            this.showMessage('Please enter both word and clue', 'error');
+            this.showMessage('Please enter both word and clue', 'error', false);
             return;
         }
 
         if (word.length > this.config.gridSize.max) {
-            this.showMessage(`Word must be ${this.config.gridSize.max} characters or less`, 'error');
+            this.showMessage(`Word must be ${this.config.gridSize.max} characters or less`, 'error', false);
             return;
         }
 
         if (!/^[A-Z]+$/.test(word)) {
-            this.showMessage('Word must contain only letters', 'error');
+            this.showMessage('Word must contain only letters', 'error', false);
             return;
         }
 
         if (this.words.some(w => w.word === word)) {
-            this.showMessage('Word already added', 'warning');
+            this.showMessage('Word already added', 'warning', false);
             return;
         }
 
@@ -159,20 +189,41 @@ class CrosswordGenerator {
         this.updateWordsList();
         this.updateButtons();
         
+        // Clear any existing crossword display since word list changed
+        this.clearCrosswordDisplay();
+        
         // Clear inputs
         wordInput.value = '';
         clueInput.value = '';
         wordInput.focus();
 
-        this.showMessage(`Added "${word}"`, 'success');
+        this.showToast(`Added "${word}"`, 'success');
     }
 
+    /**
+     * Load preset word list from user interface selection
+     * Handles caching, loading state, and error recovery
+     * Does not generate crossword - only loads words for later generation
+     */
     async loadPreset() {
         const presetSelect = document.getElementById('presetSelect');
         const selectedPreset = presetSelect.value;
 
         if (!selectedPreset) {
-            this.showMessage('Please select a preset theme', 'warning');
+            this.showMessage('Please select a preset theme', 'warning', false);
+            return;
+        }
+
+        // Ensure configuration is loaded
+        if (!this.configLoaded) {
+            this.showMessage('Configuration is still loading, please try again in a moment', 'warning', false);
+            return;
+        }
+
+        // Validate configuration exists
+        if (!this.config.presets || !this.config.presets[selectedPreset]) {
+            console.error('Available presets:', Object.keys(this.config.presets || {}));
+            this.showMessage(`Theme "${selectedPreset}" not found in configuration`, 'error', false);
             return;
         }
 
@@ -183,32 +234,70 @@ class CrosswordGenerator {
         loadPresetBtn.disabled = true;
 
         try {
-            // Load preset from file if not already cached
+            // Initialize presets cache if needed
             if (!this.presets) {
                 this.presets = {};
             }
+
+            // Load preset from file if not already cached
+            let presetWords;
             if (!this.presets[selectedPreset]) {
-                this.presets[selectedPreset] = await this.loadPresetFromFile(selectedPreset);
+                console.log(`Loading preset ${selectedPreset} from file...`);
+                presetWords = await this.loadPresetFromFile(selectedPreset);
+                
+                // Validate loaded data
+                if (!presetWords || presetWords.length === 0) {
+                    throw new Error(`No valid words found in preset file`);
+                }
+                
+                // Cache the loaded preset
+                this.presets[selectedPreset] = presetWords;
+                console.log(`Cached ${presetWords.length} words for preset ${selectedPreset}`);
+            } else {
+                console.log(`Using cached preset ${selectedPreset}`);
+                presetWords = this.presets[selectedPreset];
             }
 
-            // Use the loaded preset
-            this.words = [...this.presets[selectedPreset]];
+            // Apply the loaded preset words (but don't generate crossword yet)
+            this.words = [...presetWords];
             this.updateWordsList();
             this.updateButtons();
             
+            // Clear any existing crossword display
+            this.clearCrosswordDisplay();
+            
+            // Reset select dropdown
             presetSelect.value = '';
             
-            const displayName = this.presetFiles[selectedPreset] || selectedPreset;
-            this.showMessage(`Loaded ${displayName} theme with ${this.words.length} words`, 'success');
+            // Get display name from configuration
+            const displayName = this.config.presets[selectedPreset].displayName || selectedPreset;
+            this.showToast(`Loaded ${displayName} theme with ${this.words.length} words. Press "Generate Crossword" to create puzzle.`, 'success');
+
         } catch (error) {
             console.error('Error loading preset:', error);
-            this.showMessage('Failed to load preset theme', 'error');
+            
+            // Provide specific error messages based on error type
+            let errorMessage = 'Failed to load preset theme';
+            if (error.message.includes('Failed to load')) {
+                errorMessage = `Unable to load theme file. Please check if the file exists.`;
+            } else if (error.message.includes('not found in configuration')) {
+                errorMessage = `Theme configuration is missing or corrupted.`;
+            } else if (error.message.includes('No valid words')) {
+                errorMessage = `Theme file appears to be empty or incorrectly formatted.`;
+            } else if (error.message.includes('Status: 404')) {
+                errorMessage = `Theme file not found on server.`;
+            } else if (error.message.includes('NetworkError') || error.message.includes('fetch')) {
+                errorMessage = `Network error loading theme. Please check your connection.`;
+            }
+            
+            this.showToast(errorMessage, 'error');
+            
         } finally {
-            // Restore button state
+            // Always restore button state
             loadPresetBtn.textContent = originalText;
             loadPresetBtn.disabled = false;
         }
-   }
+    }
 
     /**
      * Populate the preset select dropdown with options from the configuration
@@ -274,7 +363,11 @@ class CrosswordGenerator {
         this.words.splice(index, 1);
         this.updateWordsList();
         this.updateButtons();
-        this.showMessage('Word removed', 'success');
+        
+        // Clear crossword display since word list changed
+        this.clearCrosswordDisplay();
+        
+        this.showToast('Word removed', 'success');
     }
 
     updateButtons() {
@@ -287,16 +380,41 @@ class CrosswordGenerator {
         toggleAnswersBtn.disabled = this.placements.length === 0;
     }
 
+    /**
+     * Enable or disable buttons during generation process
+     * @param {boolean} disabled - Whether buttons should be disabled
+     */
+    setButtonsDisabled(disabled) {
+        const printBtn = document.getElementById('printBtn');
+        const toggleAnswersBtn = document.getElementById('toggleAnswersBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const loadPresetBtn = document.getElementById('loadPresetBtn');
+        const addWordBtn = document.getElementById('addWordBtn');
+        
+        printBtn.disabled = disabled || this.placements.length === 0;
+        toggleAnswersBtn.disabled = disabled || this.placements.length === 0;
+        clearBtn.disabled = disabled;
+        loadPresetBtn.disabled = disabled;
+        addWordBtn.disabled = disabled;
+    }
+
     clearAll() {
         this.words = [];
         this.showAnswers = false;
         this.reset();
         this.updateWordsList();
         this.updateButtons();
+        this.clearCrosswordDisplay();
+        this.showToast('All data cleared', 'success');
+    }
+
+    /**
+     * Clear the crossword display without affecting word list
+     */
+    clearCrosswordDisplay() {
         document.getElementById('crosswordGrid').innerHTML = '';
         document.getElementById('acrossClues').innerHTML = '';
         document.getElementById('downClues').innerHTML = '';
-        this.showMessage('All data cleared', 'success');
     }
 
     reset() {
@@ -428,12 +546,16 @@ class CrosswordGenerator {
     /**
      * Generate crossword using the selected generation mode and options
      * Systematically tries all possibilities with timeout when enforcing all words
+     * Only displays crossword after successful generation or failure
      */
     generateCrossword() {
         if (this.words.length < 2) {
-            this.showMessage('Need at least 2 words to generate crossword', 'error');
+            this.showMessage('Need at least 2 words to generate crossword', 'error', false);
             return;
         }
+
+        // Clear any existing crossword display immediately
+        this.clearCrosswordDisplay();
 
         // Get generation options from UI and config
         const generationMode = document.getElementById('generationMode').value;
@@ -447,11 +569,14 @@ class CrosswordGenerator {
         
         if (enforceAllWords) {
             generateBtn.innerHTML = 'Trying all possibilities... <span class="loading"></span>';
-            this.showMessage('Systematically exploring all possible arrangements...', 'info');
+            // Don't show the exploring message immediately, let the generation process handle it
         } else {
             generateBtn.innerHTML = 'Generating... <span class="loading"></span>';
         }
         generateBtn.disabled = true;
+
+        // Disable other buttons during generation
+        this.setButtonsDisabled(true);
 
         // Use setTimeout to allow UI update
         setTimeout(() => {
@@ -486,6 +611,11 @@ class CrosswordGenerator {
         
         // If not enforcing all words, just do a single attempt
         const totalAttempts = enforceAllWords ? maxAttempts : 1;
+        
+        // Show appropriate message based on mode
+        if (enforceAllWords) {
+            this.showToast('Systematically exploring all possible arrangements...', 'info');
+        }
         
         // Generate different seed combinations for systematic exploration
         const seedCombinations = this.generateSeedCombinations(generationMode);
@@ -533,9 +663,20 @@ class CrosswordGenerator {
         }
         
         this.showAnswers = false; // Reset answer visibility when generating new crossword
-        this.displayCrossword();
-        this.displayClues();
+        
+        // Only display crossword if we have a result
+        if (bestResult && bestResult.placements.length > 0) {
+            this.displayCrossword();
+            this.displayClues();
+        } else {
+            // Clear display if no result
+            this.clearCrosswordDisplay();
+        }
+        
         this.updateButtons();
+        
+        // Re-enable all buttons
+        this.setButtonsDisabled(false);
         
         // Reset toggle button text
         const toggleAnswersBtn = document.getElementById('toggleAnswersBtn');
@@ -549,14 +690,17 @@ class CrosswordGenerator {
         const totalCount = this.words.length;
         const timeElapsed = ((Date.now() - startTime) / 1000).toFixed(1);
         
+        // Clear any existing progress messages and show final result
         if (foundPerfectSolution) {
-            this.showMessage(`Perfect solution found! All ${placedCount} words placed after ${attempts} attempts (${timeElapsed}s)`, 'success');
+            this.showToast(`Perfect solution found! All ${placedCount} words placed after ${attempts} attempts (${timeElapsed}s)`, 'success');
         } else if (placedCount === totalCount) {
-            this.showMessage(`Successfully generated crossword with all ${placedCount} words after ${attempts} attempts (${timeElapsed}s)`, 'success');
-        } else if (enforceAllWords && attempts > 1) {
-            this.showMessage(`Best result: ${placedCount} out of ${totalCount} words after ${attempts} attempts (${timeElapsed}s)`, 'warning');
+            this.showToast(`Successfully generated crossword with all ${placedCount} words after ${attempts} attempts (${timeElapsed}s)`, 'success');
+        } else if (placedCount > 0 && enforceAllWords && attempts > 1) {
+            this.showToast(`Best result: ${placedCount} out of ${totalCount} words after ${attempts} attempts (${timeElapsed}s)`, 'warning');
+        } else if (placedCount > 0) {
+            this.showToast(`Generated crossword with ${placedCount} out of ${totalCount} words`, 'warning');
         } else {
-            this.showMessage(`Generated crossword with ${placedCount} out of ${totalCount} words`, 'warning');
+            this.showToast(`Unable to generate crossword with current words after ${attempts} attempts (${timeElapsed}s). Try different generation settings or fewer words.`, 'error');
         }
     }
 
@@ -922,7 +1066,7 @@ class CrosswordGenerator {
 
     printCrossword() {
         if (this.placements.length === 0) {
-            this.showMessage('Generate a crossword first', 'error');
+            this.showMessage('Generate a crossword first', 'error', false);
             return;
         }
         
@@ -967,9 +1111,93 @@ class CrosswordGenerator {
         printDownClues.innerHTML = document.getElementById('downClues').innerHTML;
     }
 
-    showMessage(text, type = 'info') {
-        // Remove existing messages
-        const existingMessages = document.querySelectorAll('.message');
+    /**
+     * Display a message to the user with automatic cleanup
+     * @param {string} text - Message text to display
+     * @param {string} type - Message type: 'info', 'success', 'warning', 'error'
+     * @param {boolean} useToast - Whether to use toast notification instead of inline message
+     */
+    showMessage(text, type = 'info', useToast = true) {
+        if (useToast) {
+            this.showToast(text, type);
+        } else {
+            this.showInlineMessage(text, type);
+        }
+        
+        // Also log to console for debugging
+        console.log(`Message (${type}): ${text}`);
+    }
+
+    /**
+     * Show toast notification
+     * @param {string} text - Message text
+     * @param {string} type - Message type
+     */
+    showToast(text, type) {
+        const toastContainer = document.getElementById('toastContainer');
+        
+        // Create toast element
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        
+        // Add close button
+        const closeBtn = document.createElement('button');
+        closeBtn.className = 'toast-close';
+        closeBtn.innerHTML = '×';
+        closeBtn.onclick = () => this.removeToast(toast);
+        
+        // Add text content
+        const textNode = document.createTextNode(text);
+        toast.appendChild(textNode);
+        toast.appendChild(closeBtn);
+        
+        // Add to container
+        toastContainer.appendChild(toast);
+        
+        // Trigger animation
+        setTimeout(() => {
+            toast.classList.add('show');
+        }, 10);
+        
+        // Set timeout based on message type and length
+        let timeout = 4000; // Default 4 seconds
+        if (type === 'error') {
+            timeout = 6000; // Errors stay longer (6 seconds)
+        } else if (type === 'success') {
+            timeout = 3000; // Success messages shorter (3 seconds)
+        } else if (text.length > 80) {
+            timeout = 6000; // Longer messages stay longer
+        }
+        
+        // Auto-remove after timeout
+        setTimeout(() => {
+            this.removeToast(toast);
+        }, timeout);
+    }
+
+    /**
+     * Remove toast notification with animation
+     * @param {HTMLElement} toast - Toast element to remove
+     */
+    removeToast(toast) {
+        if (toast && toast.parentNode) {
+            toast.classList.remove('show');
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.parentNode.removeChild(toast);
+                }
+            }, 300); // Wait for animation to complete
+        }
+    }
+
+    /**
+     * Show inline message (fallback for when toast is not desired)
+     * @param {string} text - Message text
+     * @param {string} type - Message type
+     */
+    showInlineMessage(text, type) {
+        // Remove existing messages of the same type to prevent duplicates
+        const existingMessages = document.querySelectorAll(`.message.${type}`);
         existingMessages.forEach(msg => msg.remove());
         
         const message = document.createElement('div');
@@ -979,17 +1207,27 @@ class CrosswordGenerator {
         const inputSection = document.querySelector('.input-section');
         inputSection.appendChild(message);
         
-        // Auto-remove after 3 seconds
+        // Set timeout based on message type and length
+        let timeout = 3000; // Default 3 seconds
+        if (type === 'error') {
+            timeout = 5000; // Errors stay longer (5 seconds)
+        } else if (type === 'success') {
+            timeout = 2000; // Success messages shorter (2 seconds)
+        } else if (text.length > 50) {
+            timeout = 4000; // Longer messages stay longer
+        }
+        
+        // Auto-remove after timeout
         setTimeout(() => {
             if (message.parentNode) {
                 message.remove();
             }
-        }, 3000);
+        }, timeout);
     }
 
     toggleAnswers() {
         if (this.placements.length === 0) {
-            this.showMessage('Generate a crossword first', 'error');
+            this.showMessage('Generate a crossword first', 'error', false);
             return;
         }
 
@@ -999,7 +1237,7 @@ class CrosswordGenerator {
         const toggleBtn = document.getElementById('toggleAnswersBtn');
         toggleBtn.textContent = this.showAnswers ? '🙈 Hide Answers' : '👁️ Show Answers';
         
-        this.showMessage(
+        this.showToast(
             this.showAnswers ? 'Answer key visible' : 'Answer key hidden', 
             'success'
         );

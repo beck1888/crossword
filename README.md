@@ -252,6 +252,14 @@ crossword/
 - Confirm file paths in configuration match actual file locations
 - Verify files are in the `public/` directory
 - Check file encoding (UTF-8 recommended)
+- Wait for configuration to fully load before selecting presets
+
+**Preset Loading Errors**
+- **"Configuration is still loading"**: Wait a moment and try again
+- **"Theme not found"**: Check that preset is defined in server-config.json
+- **"Unable to load theme file"**: Verify file exists and is accessible
+- **"Theme file appears to be empty"**: Check file format and content
+- **"Network error loading theme"**: Check internet connection and server status
 
 **Generation Performance**
 - Reduce `maxAttempts` for faster generation
@@ -271,19 +279,12 @@ crossword/
 - **"Word must contain only letters"**: Remove numbers and special characters
 - **"Word already added"**: Each word can only be added once
 
-## Development
+### Message System
 
-### Code Documentation
-- All methods include JSDoc comments explaining parameters and return values
-- Configuration loading includes error handling and fallback defaults
-- Generation algorithms are documented with strategy explanations
-
-### Adding Features
-- Follow existing code patterns and documentation standards
-- Test new features with various word combinations and generation modes
-- Ensure print compatibility for any UI changes
-- Update configuration schema and README for new options
-
-## License
-
-This crossword generator is designed for educational and personal use. The clean, simple interface and comprehensive documentation make it suitable for classroom activities, personal puzzle creation, and learning web development concepts.
+The application uses a smart message system:
+- **Error messages**: Display for 5 seconds (red)
+- **Warning messages**: Display for 3 seconds (orange)
+- **Success messages**: Display for 2 seconds (green)
+- **Info messages**: Display for 3-4 seconds (blue)
+- **Duplicate prevention**: Same message types replace previous ones
+- **Console logging**: All messages are logged for debugging

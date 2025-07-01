@@ -418,11 +418,11 @@ button:disabled {
     }
     
     .print-grid {
-        flex: 0 0 auto;
+        flex: 1; /* Allow grid to take more space */
         display: flex;
         justify-content: center;
-        align-items: flex-start;
-        max-height: 45vh;
+        align-items: center; /* Center the grid vertically */
+        max-height: 60vh; /* Increase max-height for a larger puzzle */
     }
     
     .print-clues {
@@ -431,6 +431,7 @@ button:disabled {
         gap: 20px;
         min-height: 0;
         overflow: hidden;
+        max-height: 35vh; /* Adjust clue height */
     }
     
     .print-clues-section {
@@ -450,69 +451,46 @@ button:disabled {
     }
     
     .print-grid #printGrid {
-        display: inline-block;
-        border: 2px solid #000;
-        background: white;
-        border-collapse: separate;
-        border-spacing: 0;
+        display: table;
+        border-collapse: separate; /* Switch to separate borders */
+        border-spacing: 0; /* Ensure no gaps between cells */
     }
     
     .print-grid .grid-row {
-        display: flex;
-        margin: 0;
-        padding: 0;
+        display: table-row;
     }
     
     .print-grid .grid-cell {
-        width: 20px;
-        height: 20px;
-        font-size: 10px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        display: table-cell;
+        width: 25px;
+        height: 25px;
+        font-size: 12px;
+        text-align: center;
+        vertical-align: middle;
         font-weight: bold;
         position: relative;
         background: white;
-        margin: 0;
         padding: 0;
-        border: 0.5px solid #000;
+        border: 1px solid #000; /* Ensure all cells have borders */
         box-sizing: border-box;
     }
     
     .print-grid .grid-cell.filled {
         background: white;
         color: #000;
-        border: 0.5px solid #000;
     }
     
     .print-grid .grid-cell.empty {
-        background: white;
-        border: none;
+        background: transparent;
+        border: 1px solid #000; /* Add borders to empty cells */
         visibility: hidden;
-    }
-    
-    /* Clean up borders for adjacent cells */
-    .print-grid .grid-row:first-child .grid-cell.filled {
-        border-top: 1px solid #000;
-    }
-    
-    .print-grid .grid-row:last-child .grid-cell.filled {
-        border-bottom: 1px solid #000;
-    }
-    
-    .print-grid .grid-cell.filled:first-child {
-        border-left: 1px solid #000;
-    }
-    
-    .print-grid .grid-cell.filled:last-child {
-        border-right: 1px solid #000;
     }
     
     .print-grid .grid-cell .number {
         position: absolute;
         top: 1px;
         left: 1px;
-        font-size: 6px;
+        font-size: 8px; /* Increase number font size */
         font-weight: bold;
         color: #000;
         line-height: 1;

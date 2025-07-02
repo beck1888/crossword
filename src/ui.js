@@ -79,20 +79,19 @@ export function displayCrossword(context) {
     const gridElement = document.getElementById('crosswordGrid');
     gridElement.innerHTML = '';
     
-    const { grid, placements, showAnswers } = context;
+    const { grid, showAnswers } = context;
     const { minRow, maxRow, minCol, maxCol } = getGridBounds(context);
 
     if (minRow === -1) return; // No words placed
 
-    gridElement.style.gridTemplateColumns = `repeat(${maxCol - minCol + 1}, 30px)`;
+    const numCols = maxCol - minCol + 1;
+    gridElement.style.gridTemplateColumns = `repeat(${numCols}, 30px)`;
 
     for (let r = minRow; r <= maxRow; r++) {
-        const rowElement = document.createElement('div');
-        rowElement.classList.add('grid-row');
         for (let c = minCol; c <= maxCol; c++) {
             const cell = document.createElement('div');
             cell.classList.add('grid-cell');
-            if (grid[r][c]) {
+            if (grid[r] && grid[r][c]) {
                 cell.classList.add('filled');
                 const letterDiv = document.createElement('div');
                 letterDiv.classList.add('letter');
@@ -112,9 +111,8 @@ export function displayCrossword(context) {
             } else {
                 cell.classList.add('empty');
             }
-            rowElement.appendChild(cell);
+            gridElement.appendChild(cell);
         }
-        gridElement.appendChild(rowElement);
     }
 }
 
@@ -151,7 +149,17 @@ export function createPrintVersion(context) {
     const printAcrossClues = document.getElementById('printAcrossClues');
     const printDownClues = document.getElementById('printDownClues');
 
-    printGrid.innerHTML = document.getElementById('crosswordGrid').innerHTML;
+    // Clear previous content
+    printGrid.innerHTML = '';
+    printAcrossClues.innerHTML = '';
+    printDownClues.innerHTML = '';
+
+    // Clone the grid
+    const gridElement = document.getElementById('crosswordGrid');
+    printGrid.innerHTML = gridElement.innerHTML;
+    printGrid.style.gridTemplateColumns = gridElement.style.gridTemplateColumns;
+
+    // Clone the clues
     printAcrossClues.innerHTML = document.getElementById('acrossClues').innerHTML;
     printDownClues.innerHTML = document.getElementById('downClues').innerHTML;
     

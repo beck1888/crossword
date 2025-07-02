@@ -154,16 +154,43 @@ export function createPrintVersion(context) {
     printAcrossClues.innerHTML = '';
     printDownClues.innerHTML = '';
 
-    // Clone the grid
-    const gridElement = document.getElementById('crosswordGrid');
-    printGrid.innerHTML = gridElement.innerHTML;
-    printGrid.style.gridTemplateColumns = gridElement.style.gridTemplateColumns;
+    const { grid, placements, wordNumbers } = context;
+    const { minRow, maxRow, minCol, maxCol } = getGridBounds(context);
+
+    if (minRow === -1) return; // No words placed
+
+    const numCols = maxCol - minCol + 1;
+    printGrid.style.gridTemplateColumns = `repeat(${numCols}, 30px)`;
+
+    for (let r = minRow; r <= maxRow; r++) {
+        for (let c = minCol; c <= maxCol; c++) {
+            const cell = document.createElement('div');
+            cell.classList.add('grid-cell');
+            if (grid[r] && grid[r][c]) {
+                cell.classList.add('filled');
+                const letterDiv = document.createElement('div');
+                letterDiv.classList.add('letter');
+                letterDiv.textContent = grid[r][c];
+                cell.appendChild(letterDiv);
+
+                if (wordNumbers[`${r}-${c}`]) {
+                    const numberDiv = document.createElement('div');
+                    numberDiv.classList.add('number');
+                    numberDiv.textContent = wordNumbers[`${r}-${c}`];
+                    cell.appendChild(numberDiv);
+                }
+            } else {
+                cell.classList.add('empty');
+            }
+            printGrid.appendChild(cell);
+        }
+    }
 
     // Clone the clues
     printAcrossClues.innerHTML = document.getElementById('acrossClues').innerHTML;
     printDownClues.innerHTML = document.getElementById('downClues').innerHTML;
-    
-    // Remove answers for printing
+
+    // Remove answers for printing by making them transparent
     printGrid.querySelectorAll('.letter').forEach(l => l.style.color = 'transparent');
 }
 

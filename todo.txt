@@ -1,3 +1,4 @@
+<Feedback>
 From round 1 feedback:
 
 Nice first cut.  Quick review notes:
@@ -12,3 +13,14 @@ Word placement appearance improves with larger word count, which makes sense. Se
 Haven’t tried printing yet, but clue spacing may be taking too much room- see attached print dialog screenshot
 
 Should we add a 5 digit random number (matching) on each puzzle and game so that teachers who save them, can keep them matched up?
+</Feedback>
+
+<Reply>
+Really good notes, thank you!! I think I’m at the stage where the AI is creating more bugs than it’s fixing, so I’ll likely have to go in a lot more manually for these to fix these bugs. The display bugs are definitely a trial and error situation, but the rest I think won’t be too egregious to fix. I’ll get on these and let you know once things look a bit more stable.
+
+Another note on some of the spacing/ size issues: there seems to be slight differences with how this works on different devices. I haven’t cross-tested other browsers yet, but I have a feeling this could be a bit of a pain. I’m optimizing for laptop screens and Chrome right now, but will keep other platforms (iPad, Safari) on my radar when I clean up the print display. I also will add a larger (ie 40 word) test file to better preview a variety of user behaviors.
+
+For the ID to match up the puzzle and keys, I’m thinking of creating a hash of the puzzle and then taking the last few characters and converting any non numeric characters to numeric ones. As long as it’s deterministic I think it’s good. How does this sound?
+
+Looking forward to progressing!!
+</Reply>

@@ -1,0 +1,14 @@
+From round 1 feedback:
+
+Nice first cut.  Quick review notes:
+Word numbering is weird - should be top, left to right
+
+Some word truncation observed. In my 40 word test, note on right side VEGET should be VEGETABLE. And BRAD should be BRADY.
+
+Input error handling - good: it seems to prevent words with spaces or hyphen, bad: it doesn’t give an error message alerting user to the problem
+
+Word placement appearance improves with larger word count, which makes sense. See 40 word screenshot attached. 
+
+Haven’t tried printing yet, but clue spacing may be taking too much room- see attached print dialog screenshot
+
+Should we add a 5 digit random number (matching) on each puzzle and game so that teachers who save them, can keep them matched up?

@@ -24,3 +24,16 @@ For the ID to match up the puzzle and keys, I’m thinking of creating a hash of
 
 Looking forward to progressing!!
 </Reply>
+
+<FollowUp>
+For the ID number, try something simple like this: 
+
+function getRandomFiveDigitNumber() {
+  return Math.floor(Math.random() * 90000) + 10000;
+}         
+
+     •    Math.random() generates a number in the range [0, 1).
+    •    Math.random() * 90000 gives a number between 0 and just under 90000.
+    •    Adding 10000 shifts that to the range [10000, 99999].
+    •    Math.floor(...) ensures the result is an integer.
+</Follow Up>

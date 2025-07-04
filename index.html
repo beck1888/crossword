@@ -10,16 +10,19 @@
     <div class="container">
         <header>
             <h1>Crossword Generator</h1>
-            <!-- @Gemini: State the change you made here -->
-            <p>VERSION INFO: Input error handeling</p>
         </header>
 
         <div class="input-section">
             <h2>Add Words and Clues</h2>
             <div class="word-input">
-                <input type="text" id="wordInput" placeholder="Enter word">
-                <span id="wordError" class="error-message"></span>
-                <input type="text" id="clueInput" placeholder="Enter clue">
+                <div class="input-wrapper">
+                    <input type="text" id="wordInput" placeholder="Enter word">
+                    <span id="wordError" class="error-message"></span>
+                </div>
+                <div class="input-wrapper">
+                    <input type="text" id="clueInput" placeholder="Enter clue">
+                    <span id="clueError" class="error-message"></span>
+                </div>
                 <button id="addWordBtn">Add Word</button>
             </div>
             

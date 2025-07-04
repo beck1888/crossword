@@ -57,6 +57,12 @@ header p {
     flex-wrap: wrap;
 }
 
+.input-wrapper {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start; /* vertical alignment fix */
+}
+
 .word-input input {
     flex: 1;
     min-width: 200px;
@@ -64,7 +70,27 @@ header p {
     border: 2px solid #000;
     background: white;
     font-size: 16px;
-    transition: none;
+    height: 40px; /* Set consistent height */
+    box-sizing: border-box; /* Ensure padding and border are included in the element's dimensions */
+}
+
+.input-section input {
+    flex: 1;
+    min-width: 200px;
+    padding: 12px 15px;
+    border: 2px solid #000;
+    background: white;
+    font-size: 16px;
+    height: 40px; /* Set consistent height */
+    box-sizing: border-box; /* Ensure padding and border are included in the element's dimensions */
+}
+
+/* Ensure consistent height and width for word and clue input boxes */
+.word-input input,
+.input-section input {
+    height: 40px; /* Set consistent height */
+    width: auto; /* Allow width to adjust dynamically */
+    box-sizing: border-box; /* Include padding and border in dimensions */
 }
 
 .word-input input:focus {
@@ -118,6 +144,10 @@ button {
     font-size: 16px;
     font-weight: bold;
     transition: none;
+
+    /* Button height fixes */
+    height: 40px;
+    line-height: 1;
 }
 
 button:hover {
@@ -417,6 +447,16 @@ button:disabled {
     body {
         padding: 10px;
     }
+}
+
+/* Explicitly enforce identical styles for word and clue input boxes */
+#wordInput,
+#clueInput {
+    height: 40px; /* Ensure consistent height */
+    padding: 12px 15px; /* Ensure consistent padding */
+    border: 2px solid #000; /* Ensure consistent border */
+    box-sizing: border-box; /* Include padding and border in dimensions */
+    font-size: 16px; /* Ensure consistent font size */
 }
 
 /* Simple loading animation */

@@ -630,7 +630,25 @@ class CrosswordGenerator {
                 // No solution found
                 console.log(`Unable to generate crossword with current words after ${attempts} attempts (${timeElapsed}s). Try different words or fewer words.`);
             }
+
+            // Generate and store a new puzzle ID for this crossword
+            this.puzzleId = this.generatePuzzleId();
+
+            // After generating and applying the crossword, update the puzzle ID display
+            const puzzleIdDisplay = document.getElementById('puzzleIdDisplay');
+            if (puzzleIdDisplay) {
+                puzzleIdDisplay.textContent = `Puzzle ID: ${this.puzzleId}`;
+            }
         }, 100);
+    }
+
+    /**
+     * Generate a random 5-digit puzzle ID (not hardcoded)
+     * @returns {string} 5-digit string
+     */
+    generatePuzzleId() {
+        // Generate a random integer between 10000 and 99999 (inclusive)
+        return Math.floor(10000 + Math.random() * 90000).toString();
     }
 
     /**
@@ -941,9 +959,6 @@ class CrosswordGenerator {
      * Generate a single crossword attempt using the specified mode
      * @param {string} mode - Generation mode: 'maxOverlap' or 'random'
      * @returns {Object} Result object with placements and placed words
-     */
-    /**
-     * Place a word in the result object (used during generation attempts)
      * @param {Object} result - Result object to modify
      * @param {string} word - Word to place
      * @param {string} clue - Clue for the word
@@ -1071,6 +1086,12 @@ class CrosswordGenerator {
 
     createPrintVersion() {
         createPrintVersion(this);
+        
+        // Also display the puzzle ID in the print version
+        const printPuzzleId = document.getElementById('printPuzzleId');
+        if (printPuzzleId) {
+            printPuzzleId.textContent = this.puzzleId ? `Puzzle ID: ${this.puzzleId}` : '';
+        }
     }
 
     toggleAnswers() {

@@ -543,6 +543,8 @@ class CrosswordGenerator {
             return;
         }
 
+        const initialWordCount = this.words.length; // Capture the initial word count here
+
         // Clear any existing crossword display immediately
         this.clearCrosswordDisplay();
 
@@ -603,9 +605,14 @@ class CrosswordGenerator {
             generateBtn.textContent = originalText;
             generateBtn.disabled = false;
             
-            const placedCount = this.placements.length;
-            const totalCount = this.words.length;
+            const initialWordCount = this.words.length;
+            const placedCount = bestResult ? bestResult.placedWords.size : 0;
+            const totalCount = initialWordCount;
             
+            // --- DEBUG LOGGING START ---
+            console.log(`DEBUG: foundPerfectSolution: ${foundPerfectSolution}, placedCount: ${placedCount}, totalCount: ${totalCount}`);
+            // --- DEBUG LOGGING END ---
+
             // Clear any existing progress messages and show final result
             if (foundPerfectSolution) {
                 // Perfect solution found
@@ -997,6 +1004,9 @@ class CrosswordGenerator {
      */
     applyGenerationResult(result) {
         this.grid = result.grid;
+
+        // Filter original words to only include those that were successfully placed
+        this.words = this.words.filter(wordObj => result.placedWords.has(wordObj.word));
 
         // Sort placements by row, then by column for correct numbering
         const sortedPlacements = result.placements.sort((a, b) => {

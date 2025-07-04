@@ -63,6 +63,11 @@ export async function generateCrosswordWithSystematicAttempts(context, generatio
         context.applyGenerationResult(bestResult);
     }
     
+    if (!foundPerfectSolution && bestResult && bestResult.placedWords.size < context.words.length) {
+        const unplacedWordsCount = context.words.length - bestResult.placedWords.size;
+        console.warn(`Warning: Could not place ${unplacedWordsCount} word(s) in the crossword.`);
+    }
+
     return { bestResult, attempts, foundPerfectSolution, timeElapsed: ((Date.now() - startTime) / 1000).toFixed(1) };
 }
 

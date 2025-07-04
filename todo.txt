@@ -5,9 +5,9 @@ Nice first cut.  Quick review notes:
 
 (Resolved - monitor) Some word truncation observed. In my 40 word test, note on right side VEGET should be VEGETABLE. And BRAD should be BRADY.
 
-Input error handling - good: it seems to prevent words with spaces or hyphen, bad: it doesn’t give an error message alerting user to the problem
+(Fixed) Input error handling - good: it seems to prevent words with spaces or hyphen, bad: it doesn’t give an error message alerting user to the problem
 
-Word placement appearance improves with larger word count, which makes sense. See 40 word screenshot attached. 
+(No action) Word placement appearance improves with larger word count, which makes sense. See 40 word screenshot attached. 
 
 Haven’t tried printing yet, but clue spacing may be taking too much room- see attached print dialog screenshot
 
@@ -36,3 +36,5 @@ function getRandomFiveDigitNumber() {
     •    Adding 10000 shifts that to the range [10000, 99999].
     •    Math.floor(...) ensures the result is an integer.
 </Follow Up>
+
+Warn the user when not all words were used. I can't fix this bug, no idea why.

@@ -974,14 +974,38 @@ class CrosswordGenerator {
     }
 
     /**
-     * Apply a generation result to the current crossword state
+     * Apply a generation result to the current crossword state, and re-number the words
+     * based on their position (top-to-bottom, left-to-right).
      * @param {Object} result - Result object to apply
      */
     applyGenerationResult(result) {
         this.grid = result.grid;
-        this.placements = result.placements;
-        this.wordNumbers = result.wordNumbers;
-        this.currentNumber = result.currentNumber;
+
+        // Sort placements by row, then by column for correct numbering
+        const sortedPlacements = result.placements.sort((a, b) => {
+            if (a.startRow !== b.startRow) {
+                return a.startRow - b.startRow;
+            }
+            return a.startCol - b.startCol;
+        });
+
+        const newWordNumbers = {};
+        let number = 0;
+        const assignedCoordinates = new Set();
+
+        sortedPlacements.forEach(placement => {
+            const coords = `${placement.startRow}-${placement.startCol}`;
+            if (!assignedCoordinates.has(coords)) {
+                number++;
+                assignedCoordinates.add(coords);
+                newWordNumbers[coords] = number;
+            }
+            placement.number = newWordNumbers[coords];
+        });
+
+        this.placements = sortedPlacements;
+        this.wordNumbers = newWordNumbers;
+        this.currentNumber = number + 1;
     }
 
     getGridBounds() {

@@ -2,7 +2,6 @@
 From round 1 feedback:
 
 Nice first cut.  Quick review notes:
-Word numbering is weird - should be top, left to right
 
 Some word truncation observed. In my 40 word test, note on right side VEGET should be VEGETABLE. And BRAD should be BRADY.
 

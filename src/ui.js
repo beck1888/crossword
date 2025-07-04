@@ -117,26 +117,49 @@ export function displayCrossword(context) {
 }
 
 /**
- * Display the clues for the crossword
+ * Display the clues for the crossword, ensuring correct numerical order.
  * @param {Object} context - The crossword generator instance
  */
 export function displayClues(context) {
-    const acrossClues = document.getElementById('acrossClues');
-    const downClues = document.getElementById('downClues');
-    acrossClues.innerHTML = '';
-    downClues.innerHTML = '';
+    const acrossCluesContainer = document.getElementById('acrossClues');
+    const downCluesContainer = document.getElementById('downClues');
+    acrossCluesContainer.innerHTML = '';
+    downCluesContainer.innerHTML = '';
 
-    const sortedPlacements = [...context.placements].sort((a, b) => a.number - b.number);
+    const acrossClues = {};
+    const downClues = {};
 
-    sortedPlacements.forEach(p => {
-        const clueItem = document.createElement('div');
-        clueItem.classList.add('clue-item');
-        clueItem.innerHTML = `<span class="clue-number">${p.number}.</span> <span class="clue-text">${p.clue}</span>`;
-        if (p.direction === 'across') {
-            acrossClues.appendChild(clueItem);
-        } else {
-            downClues.appendChild(clueItem);
+    // Group clues by number and direction
+    context.placements.forEach(p => {
+        const list = p.direction === 'across' ? acrossClues : downClues;
+        if (!list[p.number]) {
+            list[p.number] = [];
         }
+        list[p.number].push(p.clue);
+    });
+
+    // Get sorted numbers for each direction
+    const sortedAcrossNumbers = Object.keys(acrossClues).map(Number).sort((a, b) => a - b);
+    const sortedDownNumbers = Object.keys(downClues).map(Number).sort((a, b) => a - b);
+
+    // Display across clues
+    sortedAcrossNumbers.forEach(number => {
+        acrossClues[number].forEach(clue => {
+            const clueItem = document.createElement('div');
+            clueItem.classList.add('clue-item');
+            clueItem.innerHTML = `<span class="clue-number">${number}.</span> <span class="clue-text">${clue}</span>`;
+            acrossCluesContainer.appendChild(clueItem);
+        });
+    });
+
+    // Display down clues
+    sortedDownNumbers.forEach(number => {
+        downClues[number].forEach(clue => {
+            const clueItem = document.createElement('div');
+            clueItem.classList.add('clue-item');
+            clueItem.innerHTML = `<span class="clue-number">${number}.</span> <span class="clue-text">${clue}</span>`;
+            downCluesContainer.appendChild(clueItem);
+        });
     });
 }
 

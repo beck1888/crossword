@@ -64,6 +64,7 @@ class CrosswordGenerator {
         const printBtn = document.getElementById('printBtn');
         const loadPresetBtn = document.getElementById('loadPresetBtn');
         const toggleAnswersBtn = document.getElementById('toggleAnswersBtn');
+        const wordError = document.getElementById('wordError');
 
         addWordBtn.addEventListener('click', () => this.addWord());
         generateBtn.addEventListener('click', () => this.generateCrossword());
@@ -71,6 +72,17 @@ class CrosswordGenerator {
         printBtn.addEventListener('click', () => this.printCrossword());
         loadPresetBtn.addEventListener('click', () => this.loadPreset());
         toggleAnswersBtn.addEventListener('click', () => this.toggleAnswers());
+
+        wordInput.addEventListener('input', () => {
+            const word = wordInput.value.toUpperCase();
+            if (!/^[A-Z]*$/.test(word)) {
+                wordError.textContent = 'Word must contain only letters';
+                addWordBtn.disabled = true;
+            } else {
+                wordError.textContent = '';
+                addWordBtn.disabled = false;
+            }
+        });
 
         // Allow Enter key to add words and Escape to cancel edit
         [wordInput, clueInput].forEach(input => {
@@ -148,9 +160,13 @@ class CrosswordGenerator {
     addWord() {
         const wordInput = document.getElementById('wordInput');
         const clueInput = document.getElementById('clueInput');
+        const wordError = document.getElementById('wordError');
         
         const word = wordInput.value.trim().toUpperCase();
         const clue = clueInput.value.trim();
+
+        // Clear previous error message
+        wordError.textContent = '';
 
         if (!word || !clue) {
             console.log('Please enter both word and clue');
@@ -158,18 +174,18 @@ class CrosswordGenerator {
         }
 
         if (word.length > this.config.gridSize.max) {
-            console.log(`Word must be ${this.config.gridSize.max} characters or less`);
+            wordError.textContent = `Word must be ${this.config.gridSize.max} characters or less`;
             return;
         }
 
         if (!/^[A-Z]+$/.test(word)) {
-            console.log('Word must contain only letters');
+            wordError.textContent = 'Word must contain only letters';
             return;
         }
 
         // Check for duplicates, but allow editing the same word
         if (this.words.some((w, index) => w.word === word && index !== this.editingIndex)) {
-            console.log('Word already added');
+            wordError.textContent = 'Word already added';
             return;
         }
 
@@ -195,6 +211,7 @@ class CrosswordGenerator {
         wordInput.value = '';
         clueInput.value = '';
         wordInput.focus();
+        document.getElementById('addWordBtn').disabled = false;
     }
 
     /**

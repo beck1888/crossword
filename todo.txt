@@ -3,7 +3,7 @@ From round 1 feedback:
 
 Nice first cut.  Quick review notes:
 
-Some word truncation observed. In my 40 word test, note on right side VEGET should be VEGETABLE. And BRAD should be BRADY.
+(Resolved - monitor) Some word truncation observed. In my 40 word test, note on right side VEGET should be VEGETABLE. And BRAD should be BRADY.
 
 Input error handling - good: it seems to prevent words with spaces or hyphen, bad: it doesn’t give an error message alerting user to the problem
 

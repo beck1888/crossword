@@ -26,6 +26,10 @@
         "sports": {
             "displayName": "Sports",
             "filePath": "public/sports.txt"
+        },
+        "bigTestFile": {
+            "displayName": "40 Words",
+            "filePath": "public/40w-test.txt"
         }
     }
 }

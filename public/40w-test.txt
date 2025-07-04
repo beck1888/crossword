@@ -1,0 +1,40 @@
+apple;Keeps the doctor away, supposedly  
+echo;Sound that bounces back  
+lava;Hot stuff from a volcano  
+drift;What snow or a car might do  
+sting;Painful jab or The Police frontman  
+orbit;Path of a planet  
+plum;A purple fruit or a cushy job  
+crisp;Snappy and fresh, like chips  
+glow;Soft light in the dark  
+snail;Slow mover with a shell  
+piano;88 keys, no strings  
+flame;Campfire flicker  
+cabin;Cozy wooden getaway  
+chalk;Used to write on a blackboard  
+sleet;Wintry mix of rain and snow  
+trick;Deceptive act or Halloween treat  
+siren;Wails in emergencies  
+noodle;Long pasta or a head  
+moose;Big antlered animal  
+trail;Path through the woods  
+mint;Fresh herb or new coin  
+prank;Playful mischief  
+robot;Machine that might walk and talk  
+socks;Warm feet covers  
+knock;What you do before entering  
+toast;Bread's crunchy transformation  
+ice;Frozen water  
+puzzle;Crossword is one  
+bride;Wedding day star  
+rope;Tug-of-war essential  
+creek;Tiny river  
+mask;Hides your face  
+paint;Comes in gallons and colors  
+jelly;Goes with peanut butter  
+crane;Lifting machine or long-necked bird  
+tide;Ocean’s daily rise and fall  
+witch;Pointy hat and broom  
+whale;Big splashy mammal  
+honey;Bee’s sweet gift  
+raven;Poe’s dark bird  
